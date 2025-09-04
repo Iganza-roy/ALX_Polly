@@ -75,6 +75,75 @@ return { id, email, name: user_metadata?.name };
 
 ---
 
+
+---
+
+## File: `app/lib/context/auth-context.tsx`
+
+### Summary
+
+This file was refactored to address several security vulnerabilities in the authentication context logic. The following improvements were made:
+
+---
+
+### 1. Sensitive Data Exposure
+
+- **Limited exposed user/session fields in context** to only safe fields (`id`, `email`, `name`, `access_token`).
+- Prevents leaking sensitive information such as tokens, internal IDs, or metadata to all components.
+
+---
+
+### 2. Error Handling
+
+- **Improved error handling:** errors are tracked in state and not logged to the console.
+- Enables UI components to display generic error messages and avoids leaking sensitive error details in production.
+
+---
+
+### 3. Session Management
+
+- **State is cleared on sign out,** reducing risk of stale or leaked data.
+- If cookies are used for authentication, they should be cleared here as well.
+
+---
+
+### 4. Logging
+
+- **Removed sensitive logging of user objects** from the context provider.
+- Prevents accidental exposure of user data in production logs.
+
+---
+
+### 5. Context API Improvements
+
+- **Added an `error` field to context** for UI error handling.
+- Ensures all context consumers can handle authentication errors gracefully.
+
+---
+
+## Example Changes
+
+```tsx
+// Only expose safe user/session fields
+const [user, setUser] = useState<SafeUser>(null);
+const [session, setSession] = useState<SafeSession>(null);
+
+// Error handling
+const [error, setError] = useState<string | null>(null);
+if (error) {
+  // Show generic error in UI
+}
+
+// Clear state on sign out
+const signOut = async () => {
+  await supabase.auth.signOut();
+  setUser(null);
+  setSession(null);
+}
+```
+
+---
+
 ## Next Steps
 
 Continue reviewing and documenting security improvements for other authentication and authorization files.
