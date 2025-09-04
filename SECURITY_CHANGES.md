@@ -143,6 +143,76 @@ const signOut = async () => {
 
 ---
 
+---
+
+## File: `app/lib/actions/poll-actions.ts`
+
+### Summary
+
+This file was refactored to address several security vulnerabilities in poll management logic. The following improvements were made:
+
+---
+
+### 1. Input Validation & Sanitization
+
+- **Added validation and sanitization for poll questions and options.**
+- Prevents XSS and logic errors due to malformed or malicious input.
+
+---
+
+### 2. Authorization & Ownership Checks
+
+- **Enforced poll ownership checks for delete and update operations.**
+- Prevents users from modifying or deleting polls they do not own.
+
+---
+
+### 3. Error Handling & Information Disclosure
+
+- **Returned generic error messages** to the client instead of exposing internal Supabase error details.
+- Prevents attackers from learning about internal logic or enumerating poll IDs.
+
+---
+
+### 4. Data Exposure
+
+- **Restricted poll data exposure to only necessary fields** when fetching polls.
+- Prevents leaking sensitive or unnecessary data.
+
+---
+
+### 5. Vote Submission Logic
+
+- **Required authentication for voting.**
+- Prevents anonymous vote spamming and enforces accountability.
+
+---
+
+## Example Changes
+
+```typescript
+// Input validation and sanitization
+if (!isValidPollText(question)) {
+  return { error: "Invalid poll question." };
+}
+for (const opt of options) {
+  if (!isValidPollText(opt)) {
+    return { error: "Invalid poll option." };
+  }
+}
+
+// Ownership check for delete
+const { error } = await supabase.from("polls").delete().eq("id", id).eq("user_id", user.id);
+
+// Restrict poll data exposure
+.select("id, question, options, created_at")
+
+// Require authentication for voting
+if (!user) return { error: "You must be logged in to vote." };
+```
+
+---
+
 ## Next Steps
 
-Continue reviewing and documenting security improvements for other authentication and authorization files.
+Continue reviewing and documenting security improvements for other files.
