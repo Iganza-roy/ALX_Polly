@@ -75,7 +75,6 @@ return { id, email, name: user_metadata?.name };
 
 ---
 
-
 ---
 
 ## File: `app/lib/context/auth-context.tsx`
@@ -139,7 +138,7 @@ const signOut = async () => {
   await supabase.auth.signOut();
   setUser(null);
   setSession(null);
-}
+};
 ```
 
 ---
