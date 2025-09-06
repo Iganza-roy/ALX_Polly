@@ -11,6 +11,10 @@ type SafeUser = {
 } | null;
 type SafeSession = { user_id: string; access_token: string } | null;
 
+/**
+ * Authentication context for the application.
+ * Provides session, user, signOut, loading, and error state to consumers.
+ */
 const AuthContext = createContext<{
   session: SafeSession;
   user: SafeUser;
@@ -25,8 +29,14 @@ const AuthContext = createContext<{
   error: null,
 });
 
+/**
+ * AuthProvider wraps the application and provides authentication state via context.
+ * Handles user/session state, error handling, and subscription to auth state changes.
+ */
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
+  // Memoize Supabase client to avoid recreating on every render
   const supabase = useMemo(() => createClient(), []);
+  // State for session, user, loading, and error
   const [session, setSession] = useState<SafeSession>(null);
   const [user, setUser] = useState<SafeUser>(null);
   const [loading, setLoading] = useState(true);
@@ -34,6 +44,10 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
   useEffect(() => {
     let mounted = true;
+    /**
+     * Fetch the current user from Supabase and update state.
+     * Handles error state and ensures only safe fields are set.
+     */
     const getUser = async () => {
       const { data, error } = await supabase.auth.getUser();
       if (error) {
@@ -56,6 +70,10 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
     getUser();
 
+    /**
+     * Subscribe to authentication state changes (login, logout, token refresh).
+     * Updates user and session state accordingly.
+     */
     const { data: authListener } = supabase.auth.onAuthStateChange(
       (_event, session) => {
         if (session) {
@@ -79,12 +97,16 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       }
     );
 
+    // Cleanup subscription on unmount
     return () => {
       mounted = false;
       authListener.subscription.unsubscribe();
     };
   }, [supabase]);
 
+  /**
+   * Sign out the current user, clear user/session state, and cookies if used.
+   */
   const signOut = async () => {
     await supabase.auth.signOut();
     setUser(null);
@@ -99,4 +121,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   );
 };
 
+/**
+ * Custom hook to access authentication context.
+ * @returns Authentication context value (session, user, signOut, loading, error)
+ */
 export const useAuth = () => useContext(AuthContext);
