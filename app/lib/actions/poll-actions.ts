@@ -3,7 +3,11 @@
 import { createClient } from '@/lib/supabase/server';
 import { revalidatePath } from 'next/cache';
 
-// Helper: sanitize and validate poll question/options
+/**
+ * Validate poll question and options for length and XSS prevention.
+ * @param text - The text to validate.
+ * @returns True if valid, false otherwise.
+ */
 function isValidPollText(text: string): boolean {
   return (
     typeof text === 'string' &&
@@ -13,14 +17,22 @@ function isValidPollText(text: string): boolean {
   );
 }
 
+/**
+ * Create a new poll for the authenticated user.
+ * Validates and sanitizes input, checks authentication, and inserts poll.
+ * @param formData - FormData containing question and options.
+ * @returns An object with an error message or null on success.
+ */
 export async function createPoll(formData: FormData) {
   const supabase = await createClient();
 
+  // Extract and sanitize question and options
   const question = (formData.get('question') as string)?.trim();
   const options = (formData.getAll('options') as string[])
     .map((opt) => opt.trim())
     .filter(Boolean);
 
+  // Validate input
   if (!question || options.length < 2) {
     return { error: 'Please provide a question and at least two options.' };
   }
@@ -46,6 +58,7 @@ export async function createPoll(formData: FormData) {
     return { error: 'You must be logged in to create a poll.' };
   }
 
+  // Insert poll into database
   const { error } = await supabase.from('polls').insert([
     {
       user_id: user.id,
@@ -63,7 +76,11 @@ export async function createPoll(formData: FormData) {
   return { error: null };
 }
 
-// GET USER POLLS
+/**
+ * Fetch all polls created by the authenticated user.
+ * Only returns necessary fields.
+ * @returns An object with polls array and error message if any.
+ */
 export async function getUserPolls() {
   const supabase = await createClient();
   const {
@@ -71,6 +88,7 @@ export async function getUserPolls() {
   } = await supabase.auth.getUser();
   if (!user) return { polls: [], error: 'Not authenticated' };
 
+  // Query only necessary fields
   const { data, error } = await supabase
     .from('polls')
     .select('id, question, options, created_at')
@@ -81,7 +99,12 @@ export async function getUserPolls() {
   return { polls: data ?? [], error: null };
 }
 
-// GET POLL BY ID
+/**
+ * Fetch a poll by its ID.
+ * Only returns necessary fields.
+ * @param id - Poll ID.
+ * @returns An object with poll data and error message if any.
+ */
 export async function getPollById(id: string) {
   const supabase = await createClient();
   const { data, error } = await supabase
@@ -94,7 +117,12 @@ export async function getPollById(id: string) {
   return { poll: data, error: null };
 }
 
-// SUBMIT VOTE
+/**
+ * Submit a vote for a poll option. Requires authentication.
+ * @param pollId - Poll ID.
+ * @param optionIndex - Index of the selected option.
+ * @returns An object with error message or null on success.
+ */
 export async function submitVote(pollId: string, optionIndex: number) {
   const supabase = await createClient();
   const {
@@ -104,6 +132,7 @@ export async function submitVote(pollId: string, optionIndex: number) {
   // Require login to vote
   if (!user) return { error: 'You must be logged in to vote.' };
 
+  // Insert vote into database
   const { error } = await supabase.from('votes').insert([
     {
       poll_id: pollId,
@@ -116,7 +145,11 @@ export async function submitVote(pollId: string, optionIndex: number) {
   return { error: null };
 }
 
-// DELETE POLL
+/**
+ * Delete a poll by ID. Only allows deletion by the poll owner.
+ * @param id - Poll ID.
+ * @returns An object with error message or null on success.
+ */
 export async function deletePoll(id: string) {
   const supabase = await createClient();
   // Get user from session
@@ -141,15 +174,23 @@ export async function deletePoll(id: string) {
   return { error: null };
 }
 
-// UPDATE POLL
+/**
+ * Update a poll's question and options. Only allows update by the poll owner.
+ * Validates and sanitizes input.
+ * @param pollId - Poll ID.
+ * @param formData - FormData containing question and options.
+ * @returns An object with error message or null on success.
+ */
 export async function updatePoll(pollId: string, formData: FormData) {
   const supabase = await createClient();
 
+  // Extract and sanitize question and options
   const question = (formData.get('question') as string)?.trim();
   const options = (formData.getAll('options') as string[])
     .map((opt) => opt.trim())
     .filter(Boolean);
 
+  // Validate input
   if (!question || options.length < 2) {
     return { error: 'Please provide a question and at least two options.' };
   }
